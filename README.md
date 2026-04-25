@@ -2,45 +2,55 @@
 A text-generation portfolio project with two runnable modes:
 
 1. Python/TensorFlow local generator (`main.py`)
-2. Static JavaScript website for GitHub Pages (`docs/index.html`, `docs/app.js`, `docs/styles.css`)
+2. Static JavaScript website (`docs/`) that runs your **local Austen model** in-browser
 
-## GitHub Pages website (recommended for portfolio)
-This mode runs fully in the browser using Transformers.js and does not need a backend server.
+## GitHub Pages website (uses your local model)
+The website loads model files from `docs/model/` (not from an external model ID).
 
 ### Files
 - `docs/index.html` - app layout
 - `docs/styles.css` - visual styling
-- `docs/app.js` - browser inference logic
-- `.github/workflows/deploy-pages.yml` - automatic deployment workflow
+- `docs/app.js` - browser inference logic (TensorFlow.js)
+- `scripts/convert_local_model_to_tfjs.py` - converts local `.h5` weights to browser model files
+- `.github/workflows/deploy-pages.yml` - automatic Pages deployment workflow
+
+### Build browser model files
+Run this from repo root:
+
+```bash
+python scripts/convert_local_model_to_tfjs.py
+```
+
+This generates:
+- `docs/model/model.json`
+- `docs/model/group1-shard*.bin`
+- `docs/model/vocab.txt`
+
+### Publish steps
+1. Run conversion script above.
+2. Commit `docs/model/*` so Pages can serve your model.
+3. Push to GitHub (`main`).
+4. In GitHub: `Settings` -> `Pages` and set source to **GitHub Actions**.
+5. Workflow deploys to:
+   - `https://<your-username>.github.io/<repo-name>/`
 
 ### UX behavior
-- Generation now returns connected output (`prompt + completion`)
-- The prompt box is auto-updated with generated text so users can keep extending naturally
-- Controls include:
+- Connected generation (`prompt + completion`)
+- Generated output is written back into the prompt box for iterative continuation
+- Controls:
   - `Max New Tokens`
   - `Temperature`
   - `Top-P`
   - `Repetition Penalty`
 
-### Publish steps
-1. Push this repo to GitHub (default branch `main`).
-2. In GitHub: `Settings` -> `Pages`.
-3. Ensure source is **GitHub Actions**.
-4. The included workflow (`Deploy static site to GitHub Pages`) will deploy on each push to `main`.
-5. Your site URL will be:
-   - `https://<your-username>.github.io/<repo-name>/`
-
-### Local preview (optional)
-Open `docs/index.html` in a browser, or run a local static server from repo root:
-
+### Local preview (static site)
 ```bash
 python -m http.server 8080
 ```
-
-Then visit: `http://127.0.0.1:8080`
+Then visit: `http://127.0.0.1:8080/docs/`
 
 ## Python/TensorFlow local mode
-This keeps your original model + weights workflow.
+This keeps your original direct-weights workflow.
 
 ### Run CLI
 ```bash
@@ -51,6 +61,4 @@ python main.py --prompt "The evening was calm until" --tokens 120 --temperature 
 ```bash
 python main.py --serve --host 127.0.0.1 --port 8000
 ```
-
 Then visit: `http://127.0.0.1:8000`
-

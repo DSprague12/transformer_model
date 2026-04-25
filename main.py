@@ -100,6 +100,7 @@ class WordPieceTokenizer:
         return tokens
 
 
+@tf.keras.utils.register_keras_serializable()
 class TiedDense(tf.keras.layers.Layer):
     def __init__(self, embedding_layer: tf.keras.layers.Embedding):
         super().__init__()
@@ -110,10 +111,24 @@ class TiedDense(tf.keras.layers.Layer):
         logits = tf.einsum("bld,vd->blv", x, embedding_matrix)
         return logits
 
+    def get_config(self) -> dict:
+        config = super().get_config()
+        config.update(
+            {
+                "embedding_layer_name": getattr(self.embedding_layer, "name", None),
+            }
+        )
+        return config
 
+
+@tf.keras.utils.register_keras_serializable()
 class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self, d_model: int, num_heads: int, dff: int, dropout_rate: float = 0.3):
         super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.dff = dff
+        self.dropout_rate = dropout_rate
         self.attention = tf.keras.layers.MultiHeadAttention(
             num_heads=num_heads,
             key_dim=d_model // num_heads,
@@ -121,7 +136,7 @@ class TransformerBlock(tf.keras.layers.Layer):
         )
         self.ffn = tf.keras.Sequential(
             [
-                tf.keras.layers.Dense(dff, activation="gelu"),
+                tf.keras.layers.Dense(dff, activation=lambda t: tf.keras.activations.gelu(t, approximate=True)),
                 tf.keras.layers.Dropout(dropout_rate),
                 tf.keras.layers.Dense(d_model),
             ]
@@ -147,7 +162,20 @@ class TransformerBlock(tf.keras.layers.Layer):
         x = x + self.dropout2(ffn_output, training=training)
         return x
 
+    def get_config(self) -> dict:
+        config = super().get_config()
+        config.update(
+            {
+                "d_model": self.d_model,
+                "num_heads": self.num_heads,
+                "dff": self.dff,
+                "dropout_rate": self.dropout_rate,
+            }
+        )
+        return config
 
+
+@tf.keras.utils.register_keras_serializable()
 class AustenTextModel(tf.keras.Model):
     def __init__(
         self,
@@ -160,6 +188,12 @@ class AustenTextModel(tf.keras.Model):
         max_seq_len: int = 256,
     ):
         super().__init__()
+        self.vocab_size = vocab_size
+        self.num_heads = num_heads
+        self.dff = dff
+        self.num_layers = num_layers
+        self.dropout_rate = dropout_rate
+        self.max_seq_len = max_seq_len
         self.d_model = d_model
         self.token_embedding = tf.keras.layers.Embedding(vocab_size, d_model)
         self.pos_embedding = tf.keras.layers.Embedding(max_seq_len, d_model)
@@ -179,7 +213,9 @@ class AustenTextModel(tf.keras.Model):
         x += self.pos_embedding(positions)
         x = self.dropout(x, training=training)
 
-        causal_mask = tf.linalg.band_part(tf.ones((seq_len, seq_len), dtype=tf.float32), -1, 0)
+        row_ids = tf.range(seq_len)[:, tf.newaxis]
+        col_ids = tf.range(seq_len)[tf.newaxis, :]
+        causal_mask = tf.cast(row_ids >= col_ids, tf.float32)
         causal_mask = causal_mask[tf.newaxis, :, :]
 
         for block in self.transformer_blocks:
@@ -187,6 +223,21 @@ class AustenTextModel(tf.keras.Model):
 
         x = self.layernorm(x)
         return self.tied_dense(x)
+
+    def get_config(self) -> dict:
+        config = super().get_config()
+        config.update(
+            {
+                "vocab_size": self.vocab_size,
+                "d_model": self.d_model,
+                "num_heads": self.num_heads,
+                "dff": self.dff,
+                "num_layers": self.num_layers,
+                "dropout_rate": self.dropout_rate,
+                "max_seq_len": self.max_seq_len,
+            }
+        )
+        return config
 
 
 class TextGenerator:
