@@ -1,6 +1,4 @@
-﻿import * as tf from "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.esm.min.js";
-
-const promptEl = document.getElementById("prompt");
+﻿const promptEl = document.getElementById("prompt");
 const outputEl = document.getElementById("output");
 const statusEl = document.getElementById("status");
 const generateBtn = document.getElementById("generateBtn");
@@ -18,6 +16,7 @@ const TOKEN_PATTERN = /\n|--|'s|'t|'re|'m|'d|[A-Za-z]+|[0-9]+|[^\w\s]/g;
 
 let model = null;
 let tokenizer = null;
+const tf = window.tf;
 
 function setStatus(text, tone = "") {
   statusEl.textContent = text;
@@ -235,6 +234,9 @@ function sampleFromLogits(logits, temperature, topP, topK, repetitionPenalty, re
 }
 
 async function ensureLocalModel() {
+  if (!tf) {
+    throw new Error("TensorFlow.js failed to load. Check internet/CDN access and refresh.");
+  }
   if (model && tokenizer) return;
 
   generateBtn.disabled = true;
@@ -345,4 +347,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     );
   }
 });
+
+
+
 
