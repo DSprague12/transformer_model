@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Writerly AI - GitHub Pages Demo</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="kicker">Portfolio Project</p>
+      <h1>Writerly AI</h1>
+      <p class="lede">
+        Browser-only text completion demo hosted on GitHub Pages.
+        Enter a prompt and generate a continuation with an on-device language model.
+      </p>
+    </section>
+
+    <section class="panel">
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" placeholder="Example: The city had been quiet for years, until one letter arrived at dawn..."></textarea>
+
+      <div class="controls">
+        <label>
+          Max New Tokens
+          <input id="maxTokens" type="number" value="90" min="10" max="300" />
+        </label>
+        <label>
+          Temperature
+          <input id="temperature" type="number" value="0.9" step="0.1" min="0.1" max="2.0" />
+        </label>
+        <label>
+          Top-P
+          <input id="topP" type="number" value="0.92" step="0.01" min="0.1" max="1.0" />
+        </label>
+        <label>
+          Repetition Penalty
+          <input id="repetitionPenalty" type="number" value="1.12" step="0.01" min="1.0" max="2.0" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="sampleBtn" class="ghost">Use Sample</button>
+        <button id="generateBtn" class="primary">Generate</button>
+      </div>
+
+      <p id="status" class="status">Model not loaded yet.</p>
+
+      <div class="output-wrap">
+        <label for="output">Connected Output (Prompt + Completion)</label>
+        <pre id="output" aria-live="polite"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

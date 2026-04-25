@@ -1,0 +1,7 @@
+﻿# Local model artifacts (too large for GitHub)
+*.weights.h5
+*.h5
+
+# Python cache
+__pycache__/
+*.pyc
