@@ -243,7 +243,7 @@ async function ensureLocalModel() {
   setStatus("Loading local model files (docs/model)... first run may take a while.");
 
   const [loadedModel, vocabText] = await Promise.all([
-    tf.loadLayersModel(MODEL_URL),
+    tf.loadGraphModel(MODEL_URL),
     fetch(VOCAB_URL).then((r) => {
       if (!r.ok) throw new Error("Could not load docs/model/vocab.txt");
       return r.text();
@@ -291,7 +291,13 @@ async function generateWithLocalModel() {
       const contextIds = inputIds.slice(-SEQUENCE_LENGTH);
       const contextTensor = tf.tensor2d([contextIds], [1, contextIds.length], "int32");
 
-      const logits = model.predict(contextTensor);
+      let logits = null;
+      try {
+        logits = model.execute({ "inputs:0": contextTensor }, "Identity:0");
+      } catch {
+        // Fallback names used by some tfjs graph exports.
+        logits = model.execute({ inputs: contextTensor }, "logits");
+      }
       const lastLogits = logits.slice([0, contextIds.length - 1, 0], [1, 1, -1]).squeeze();
       const logitsArray = await lastLogits.data();
 
