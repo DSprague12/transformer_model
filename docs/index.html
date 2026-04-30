@@ -21,11 +21,11 @@
     <section class="panel">
       <label for="prompt">Prompt</label>
       <textarea id="prompt" placeholder="Example: The city had been quiet for years, until one letter arrived at dawn..."></textarea>
-
+      <p>CPU based models such as this one may struggle exponentially with max new tokens values above 5.</p>
       <div class="controls">
         <label>
           Max New Tokens
-          <input id="maxTokens" type="number" value="90" min="10" max="300" />
+          <input id="maxTokens" type="number" value="5" min="1" max="300" />
         </label>
         <label>
           Temperature
