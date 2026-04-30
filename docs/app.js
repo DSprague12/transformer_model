@@ -287,7 +287,8 @@ async function generateWithLocalModel() {
     generateBtn.disabled = true;
     setStatus("Generating with local model...");
 
-    const maxNewTokens = clampNumber(maxTokensEl.value, 10, 300, 90);
+    const maxNewTokens = clampNumber(maxTokensEl.value, 1, 300, 90);
+    console.log("maxNewTokens input value:", maxTokensEl.value, "| Used:", maxNewTokens);
     const temperature = clampNumber(temperatureEl.value, 0.1, 2.0, 0.9);
     const topP = clampNumber(topPEl.value, 0.1, 1.0, 0.92);
     const repetitionPenalty = clampNumber(repetitionPenaltyEl.value, 1.0, 2.0, 1.12);
@@ -299,15 +300,21 @@ async function generateWithLocalModel() {
     const promptIds = tokenizer.encode(normalized);
     const inputIds = [...promptIds];
 
+    console.debug("Generating tokens");
     for (let step = 0; step < maxNewTokens; step += 1) {
       const contextIds = inputIds.slice(-SEQUENCE_LENGTH);
       const contextTensor = tf.tensor2d([contextIds], [1, contextIds.length], "int32");
 
       let logits = null;
       try {
+        console.debug(`Token ${step}`);
+        let time = performance.now();
         logits = model.execute({ "inputs:0": contextTensor }, "Identity:0");
+        time = performance.now() - time;
+        console.debug(`Token ${step} completed in ${time} ms`);
       } catch {
         // Fallback names used by some tfjs graph exports.
+        console.debug(`Token ${step} caught error, retrying with fallback output name...`);
         logits = model.execute({ inputs: contextTensor }, "logits");
       }
       const lastLogits = logits.slice([0, contextIds.length - 1, 0], [1, 1, -1]).squeeze();
@@ -330,7 +337,9 @@ async function generateWithLocalModel() {
       await tf.nextFrame();
     }
 
+
     const generatedIds = inputIds.slice(promptIds.length);
+    console.log("Generated token count:", generatedIds.length);
     const continuation = tokenizer.decode(generatedIds);
     const merged = mergePromptAndCompletion(prompt, continuation);
 

@@ -5,7 +5,7 @@ import threading
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, cast
 
 import tensorflow as tf
 
@@ -146,21 +146,26 @@ class TransformerBlock(tf.keras.layers.Layer):
         self.dropout1 = tf.keras.layers.Dropout(dropout_rate)
         self.dropout2 = tf.keras.layers.Dropout(dropout_rate)
 
-    def call(self, x: tf.Tensor, training: bool = False, causal_mask: tf.Tensor | None = None) -> tf.Tensor:
-        norm_x = self.layernorm1(x)
-        attn_output = self.attention(
-            query=norm_x,
-            value=norm_x,
-            key=norm_x,
-            attention_mask=causal_mask,
-            training=training,
-        )
-        x = x + self.dropout1(attn_output, training=training)
+    def call(self, x: tf.Tensor, training=None, mask=None, **kwargs) -> tf.Tensor:
+      # Ensure training is a bool
+      if training is None:
+        training = False
+      norm_x = self.layernorm1(x)
+      attn_output = self.attention(
+        query=norm_x,
+        value=norm_x,
+        key=norm_x,
+        attention_mask=mask,
+        training=training,
+      )
+      if isinstance(attn_output, tuple):
+        attn_output = attn_output[0]
+      x = x + self.dropout1(attn_output, training=training)
 
-        norm_x = self.layernorm2(x)
-        ffn_output = self.ffn(norm_x, training=training)
-        x = x + self.dropout2(ffn_output, training=training)
-        return x
+      norm_x = self.layernorm2(x)
+      ffn_output = self.ffn(norm_x, training=training)
+      x = x + self.dropout2(ffn_output, training=training)
+      return x
 
     def get_config(self) -> dict:
         config = super().get_config()
@@ -204,25 +209,28 @@ class AustenTextModel(tf.keras.Model):
         self.layernorm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         self.tied_dense = TiedDense(self.token_embedding)
 
-    def call(self, inputs: tf.Tensor, training: bool = False) -> tf.Tensor:
-        seq_len = tf.shape(inputs)[1]
-        positions = tf.range(seq_len)
+    def call(self, inputs: tf.Tensor, training=None, mask=None) -> tf.Tensor:
+      # Ensure training is a bool
+      if training is None:
+        training = False
+      seq_len = tf.shape(inputs)[1]
+      positions = tf.range(seq_len)
 
-        x = self.token_embedding(inputs)
-        x *= tf.cast(tf.math.sqrt(tf.cast(self.d_model, tf.float32)), x.dtype)
-        x += self.pos_embedding(positions)
-        x = self.dropout(x, training=training)
+      x = self.token_embedding(inputs)
+      x *= tf.cast(tf.math.sqrt(tf.cast(self.d_model, tf.float32)), x.dtype)
+      x += self.pos_embedding(positions)
+      x = self.dropout(x, training=training)
 
-        row_ids = tf.range(seq_len)[:, tf.newaxis]
-        col_ids = tf.range(seq_len)[tf.newaxis, :]
-        causal_mask = tf.cast(row_ids >= col_ids, tf.float32)
-        causal_mask = causal_mask[tf.newaxis, :, :]
+      row_ids = tf.range(seq_len)[:, tf.newaxis]
+      col_ids = tf.range(seq_len)[tf.newaxis, :]
+      attention_mask = tf.cast(row_ids >= col_ids, tf.float32)
+      attention_mask = attention_mask[tf.newaxis, :, :]
 
-        for block in self.transformer_blocks:
-            x = block(x, training=training, causal_mask=causal_mask)
+      for block in self.transformer_blocks:
+        x = block(x, training=training, mask=attention_mask)
 
-        x = self.layernorm(x)
-        return self.tied_dense(x)
+      x = self.layernorm(x)
+      return self.tied_dense(x)
 
     def get_config(self) -> dict:
         config = super().get_config()
@@ -380,7 +388,7 @@ def build_generator() -> TextGenerator:
     model(tf.zeros((1, 1), dtype=tf.int32), training=False)
     model.load_weights(str(WEIGHT_PATH))
 
-    return TextGenerator(model=model, tokenizer=tokenizer)
+    return TextGenerator(model=cast(AustenTextModel, model), tokenizer=tokenizer)
 
 
 def get_generator() -> TextGenerator:
