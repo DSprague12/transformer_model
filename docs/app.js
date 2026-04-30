@@ -16,7 +16,16 @@ const TOKEN_PATTERN = /\n|--|'s|'t|'re|'m|'d|[A-Za-z]+|[0-9]+|[^\w\s]/g;
 
 let model = null;
 let tokenizer = null;
+
 const tf = window.tf;
+
+// Force TensorFlow.js to use CPU backend for compatibility (avoids WebGL errors)
+async function setTFBackendCPU() {
+  if (tf.getBackend() !== 'cpu') {
+    await tf.setBackend('cpu');
+    await tf.ready();
+  }
+}
 
 function setStatus(text, tone = "") {
   statusEl.textContent = text;
@@ -233,11 +242,14 @@ function sampleFromLogits(logits, temperature, topP, topK, repetitionPenalty, re
   return nucleus[nucleus.length - 1][0];
 }
 
+
 async function ensureLocalModel() {
   if (!tf) {
     throw new Error("TensorFlow.js failed to load. Check internet/CDN access and refresh.");
   }
   if (model && tokenizer) return;
+
+  await setTFBackendCPU();
 
   generateBtn.disabled = true;
   setStatus("Loading local model files (docs/model)... first run may take a while.");
