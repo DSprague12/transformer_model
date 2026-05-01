@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Writerly AI - GitHub Pages Demo</title>
+  <title>My Portfolio AI - GitHub Pages Demo</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -15,13 +15,14 @@
       <p class="lede">
         Browser-only text completion demo hosted on GitHub Pages.
         Enter a prompt and generate a continuation with an on-device language model.
+        Due to hosting contraints, this demo only uses the CPU for inference, to get better performance, try running the code locally with GPU support using python.
       </p>
     </section>
 
     <section class="panel">
       <label for="prompt">Prompt</label>
       <textarea id="prompt" placeholder="Example: The city had been quiet for years, until one letter arrived at dawn..."></textarea>
-      <p>CPU based models such as this one may struggle exponentially with max new tokens values above 5.</p>
+      <p>CPU based models such as this one may struggle exponentially with total token values above 5.</p>
       <div class="controls">
         <label>
           Max New Tokens
